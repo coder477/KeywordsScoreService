@@ -20,14 +20,14 @@ public class KeywordSearchService {
 	public KeyWordScoreResponse estimateScore(String keyword) {
 
 		KeyWordScoreResponse response = new KeyWordScoreResponse();
-		int score = getScore(keyword);
+		Double score = getScore(keyword);
 		response.setKeyWord(keyword);
 		response.setScore(score);
 
 		return response;
 	}
 
-	private int getScore(String keyword) {
+	private Double getScore(String keyword) {
 
 		double finalScore = 0;
 
@@ -46,9 +46,9 @@ public class KeywordSearchService {
 			finalScore = finalScore + prefixScores.get(prefix);
 
 		}
-		finalScore = finalScore * 10 / prefixScores.size();
+		finalScore = 10*finalScore/prefixScores.size()  ;
 
-		return (int) finalScore;
+		return (finalScore);
 	}
 
 	private Double getPrefixSum(String awsWord, String prefix, String keyword) {
