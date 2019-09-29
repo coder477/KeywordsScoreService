@@ -22,22 +22,23 @@ public class KeywordSearchService {
 
 	private ExecutorService service = Executors.newCachedThreadPool();
 
-	public KeyWordScoreResponse estimateScore(String keyword) throws InterruptedException{
+	private static final Integer TIME_OUT_LIMIT = 10;
+
+	public KeyWordScoreResponse estimateScore(String keyword) throws InterruptedException {
 		return new KeyWordScoreResponse(keyword, getScore(keyword));
 	}
 
-	private Double getScore(String keyword) throws InterruptedException{
+	private Double getScore(String keyword) throws InterruptedException {
 		double finalScore = 0;
 		List<String> prefixes = getPrefixesArray(keyword);
 		Map<String, Double> prefixScores = new HashMap<String, Double>();
 
-
 		List<Callable<List<String>>> callables = new ArrayList<>();
 
-		for (String prefix: prefixes) {
+		for (String prefix : prefixes) {
 			callables.add(() -> amazonServiceWrapper.getKeyWordData(prefix));
 		}
-		List<Future<List<String>>> futures = service.invokeAll(callables, 10, TimeUnit.SECONDS);
+		List<Future<List<String>>> futures = service.invokeAll(callables, TIME_OUT_LIMIT, TimeUnit.SECONDS);
 
 		for (int i = 0; i < prefixes.size(); i++) {
 			List<String> words = null;
@@ -50,26 +51,44 @@ public class KeywordSearchService {
 			Double prefixSum = 0.0;
 			for (int j = 0; j < words.size(); j++) {
 				prefixSum = prefixSum + getPrefixSum(words.get(j), prefixes.get(i), keyword);
-				prefixScores.put( prefixes.get(i), prefixSum);
+				prefixScores.put(prefixes.get(i), prefixSum);
 			}
 		}
 		for (String prefix : prefixScores.keySet()) {
 			finalScore = finalScore + prefixScores.get(prefix);
 
 		}
-		finalScore = finalScore/ (5*(keyword.length()*keyword.length()+keyword.length()));
+		finalScore = finalScore / (5 * (keyword.length() * keyword.length() + keyword.length()));
 
-		return (finalScore)*100;
+		return (finalScore) * 100;
 	}
 
 	private Double getPrefixSum(String awsWord, String prefix, String keyword) {
 		Double score = 0.0;
 		if (awsWord.startsWith(keyword)) {
-			score = 1.0 * (keyword.length() - prefix.length()+1);
+			score = 1.0 * (keyword.length() - prefix.length() + 1);
 		} else {
-			score = 0.0;
+			score = getPartialScore(awsWord, prefix, keyword) * (keyword.length() - prefix.length() + 1);
+
 		}
 		return score;
+	}
+
+	private Double getPartialScore(String awsWord, String prefix, String keyword) {
+		// split awsword,keyword with space and match aws word against each with key
+		// word aray. increment the macth count and divide by aws word array length and
+		String[] awsWords = awsWord.split(" ");
+		String[] keyWords = keyword.split(" ");
+		int minLen = Math.min(awsWords.length, keyWords.length);
+		int matchCount = 0;
+		for (int i = 0; i < minLen; i++) {
+			if (awsWords[i].equalsIgnoreCase(keyWords[i])) {
+				matchCount++;
+			}
+
+		}
+		Double partialScore = 1.0 * matchCount / awsWords.length;
+		return partialScore;
 	}
 
 	private List<String> getPrefixesArray(String str) {
