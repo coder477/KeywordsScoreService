@@ -8,6 +8,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.json.JSONArray;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
@@ -24,25 +25,29 @@ import static org.slf4j.LoggerFactory.getLogger;
 @Component
 public class AmazonServiceWrapper {
 
-	private static final Logger log = getLogger(KeywordSearchController.class);
+	private static final Logger log = getLogger(AmazonServiceWrapper.class);
 
 	@Autowired
 	private RestTemplate restTemplate;
 
 	private final String AUTO_COMPLETE_API = "https://completion.amazon.com/search/complete?method=completion&mkt=1&search-alias=aps&q=";
 
-	public Pair<String, List<String>> getKeyWordData(String index) {
+	public Pair<String, List<String>> getKeyWordDataAsPair(String index) {
 		try {
 
 			log.info("Fetching keywords for prefix " + index);
 
+			if (index.equals("iphone")) {
+				throw new BadRequestException(HttpStatus.BAD_REQUEST, "SSDDS");
+
+			}
 			JSONArray responseArray = new JSONArray(
 					restTemplate.getForObject(AUTO_COMPLETE_API.concat(index), String.class)
 			).getJSONArray(1);
 
 			List<String> amazonSearchWords = IntStream.range(0, responseArray.length())
 					.mapToObj(responseArray::getString).collect(Collectors.toList());
-			new ImmutablePair<>(index, amazonSearchWords);
+			return new ImmutablePair<>(index, amazonSearchWords);
 		} catch (HttpStatusCodeException httpException) {
 			if (httpException.getStatusCode().is4xxClientError()) {
 				throw new BadRequestException(httpException.getStatusCode(), httpException.getResponseBodyAsString());
