@@ -1,8 +1,13 @@
 package com.keyword.scoreestimation.response;
 
 public class KeyWordScoreResponse {
-	String keyWord;
-	Double score;
+	private String keyWord;
+	private Double score;
+
+	public KeyWordScoreResponse(String keyWord, Double score) {
+		this.keyWord = keyWord;
+		this.score = score;
+	}
 	public String getKeyWord() {
 		return keyWord;
 	}
@@ -15,7 +20,4 @@ public class KeyWordScoreResponse {
 	public void setScore(Double score) {
 		this.score = score;
 	}
-	
-	
-
 }
